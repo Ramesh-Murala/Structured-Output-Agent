@@ -1,0 +1,5 @@
+{
+  "prompt": "Extract candidate details from: Jane Doe, jane@example.com, Python and FastAPI developer with 4 years of experience.",
+  "schema_name": "candidate",
+  "max_retries": 2
+}

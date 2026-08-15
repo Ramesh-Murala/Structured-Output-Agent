@@ -1,0 +1,5 @@
+{
+  "prompt": "Classify this ticket: I have been locked out of my account since yesterday and I need access before payroll closes tonight.",
+  "schema_name": "support_ticket",
+  "max_retries": 2
+}

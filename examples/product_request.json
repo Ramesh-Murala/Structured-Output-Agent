@@ -1,0 +1,5 @@
+{
+  "prompt": "Extract product details: Wireless Mechanical Keyboard, $89.99 USD, currently available, https://example.com/keyboard",
+  "schema_name": "product",
+  "max_retries": 2
+}
