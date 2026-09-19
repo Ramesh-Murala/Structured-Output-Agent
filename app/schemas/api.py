@@ -21,7 +21,8 @@ class GenerateResponse(BaseModel):
     attempts: int
     validation_failures: list[ValidationFailure]
     data: dict[str, Any] | None
-    raw_output: str | None = None
+    raw_output: str | None = None  # Deprecated: retained as null for response compatibility.
+    latency_ms: float = Field(default=0, ge=0)
 
 
 class HealthResponse(BaseModel):

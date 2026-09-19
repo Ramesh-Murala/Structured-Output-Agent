@@ -29,5 +29,7 @@ async def generate(
             schema_name=payload.schema_name,
             max_retries=retries,
         )
+    except TimeoutError as exc:
+        raise HTTPException(status_code=504, detail="Generation deadline exceeded") from exc
     except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+        raise HTTPException(status_code=503, detail="Generation provider unavailable") from exc

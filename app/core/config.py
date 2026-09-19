@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     max_retries: int = Field(default=2, ge=0, le=10)
 
+    request_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
+
     llm_provider: Literal["openai", "mock"] = "openai"
     openai_api_key: str | None = None
     openai_model: str = "gpt-5-mini"

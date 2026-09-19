@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from openai import AsyncOpenAI
+from openai import APIError, AsyncOpenAI
 
 from app.llm.base import LLMProvider
 
@@ -17,9 +17,12 @@ class OpenAIProvider(LLMProvider):
             "The JSON must satisfy this schema exactly:\n"
             f"{json.dumps(json_schema, ensure_ascii=False)}"
         )
-        response = await self.client.responses.create(
-            model=self.model,
-            instructions=instructions,
-            input=prompt,
-        )
+        try:
+            response = await self.client.responses.create(
+                model=self.model,
+                instructions=instructions,
+                input=prompt,
+            )
+        except APIError as exc:
+            raise RuntimeError("Generation provider unavailable") from exc
         return response.output_text

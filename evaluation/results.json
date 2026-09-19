@@ -1,0 +1,90 @@
+{
+  "mode": "offline_scripted_fault_injection",
+  "cases": 8,
+  "first_response_validity": 0.125,
+  "after_retry_validity": 0.875,
+  "mean_provider_calls": 2.0,
+  "results": [
+    {
+      "case": "valid_candidate",
+      "first_response_valid": true,
+      "after_retry_valid": true,
+      "provider_calls": 1,
+      "expected_success": true,
+      "failures": []
+    },
+    {
+      "case": "malformed_json",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "json_parse_error"
+      ]
+    },
+    {
+      "case": "array_instead_of_object",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "json_parse_error"
+      ]
+    },
+    {
+      "case": "invalid_email",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "negative_experience",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "invalid_price",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "invalid_enum",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "retry_exhaustion",
+      "first_response_valid": false,
+      "after_retry_valid": false,
+      "provider_calls": 3,
+      "expected_success": false,
+      "failures": [
+        "json_parse_error",
+        "json_parse_error",
+        "json_parse_error"
+      ]
+    }
+  ],
+  "limitation": "Scripted corrections; not live-model success rates, factual accuracy, token cost, or provider latency."
+}

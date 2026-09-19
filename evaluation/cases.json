@@ -1,0 +1,82 @@
+[
+  {
+    "name": "valid_candidate",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "malformed_json",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "not-json",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "array_instead_of_object",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "[]",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "invalid_email",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Jane Doe\", \"email\": \"invalid\", \"skills\": [\"Python\"], \"years_experience\": 4}",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "negative_experience",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": -1}",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "invalid_price",
+    "schema": "product",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Keyboard\", \"price\": -1, \"currency\": \"USD\", \"in_stock\": true}",
+      "{\"name\": \"Keyboard\", \"price\": 49.99, \"currency\": \"USD\", \"in_stock\": true}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "invalid_enum",
+    "schema": "support_ticket",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"category\": \"unknown\", \"priority\": \"high\", \"summary\": \"Cannot sign in\", \"requires_human\": true, \"sentiment\": \"negative\"}",
+      "{\"category\": \"technical\", \"priority\": \"high\", \"summary\": \"Cannot sign in\", \"requires_human\": true, \"sentiment\": \"negative\"}"
+    ],
+    "expected_success": true
+  },
+  {
+    "name": "retry_exhaustion",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "bad",
+      "still bad",
+      "also bad"
+    ],
+    "expected_success": false
+  }
+]
