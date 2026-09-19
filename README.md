@@ -1,8 +1,115 @@
 # Structured Output Agent
 
+[![CI](https://github.com/Ramesh-Murala/Structured-Output-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ramesh-Murala/Structured-Output-Agent/actions/workflows/ci.yml)
+
 An inspectable reliability layer for LLM-backed APIs: validate generated JSON against Pydantic schemas, feed errors into bounded corrective retries, and return an explicit failure when correction is exhausted.
 
 **Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields.
+
+
+## Visual proof
+
+### Architecture
+
+```mermaid
+flowchart TD
+  A["POST /v1/generate"] --> B["Schema registry + retry budget"]
+  B --> C["LLM provider"]
+  C --> D{"Parse + validate"}
+  D -->|valid| E["Typed API response"]
+  D -->|invalid| F["Metadata log + corrective prompt"]
+  F -->|budget remains| C
+  F -->|exhausted| G["Explicit failure response"]
+```
+
+### Request and response replay
+
+![Captured request and response replay](docs/assets/api-demo.gif)
+
+This GIF renders actual captured JSON as an animated transcript; it is not a screen recording. POST `/v1/generate` using FastAPI TestClient and the deterministic mock provider. Any `latency_ms` is a single local sample, not a performance benchmark.
+
+### Evaluation results
+
+| Measure | Recorded result |
+|---|---:|
+| Scripted cases | 8 |
+| Valid on first response | 12.5% (1/8) |
+| Valid after correction | 87.5% (7/8) |
+| Mean provider calls | 2.0 |
+
+[Recorded evaluation](evaluation/results.json). Eight scripted cases test control flow, including one intentional exhaustion. These are not live-model success rates.
+
+### Sample request
+
+```json
+{
+  "prompt": "Extract John Smith, john@example.com, Python, FastAPI, Docker, AWS, five years experience.",
+  "schema_name": "candidate",
+  "max_retries": 2
+}
+```
+
+### Captured response
+
+```json
+{
+  "success": true,
+  "schema_name": "candidate",
+  "attempts": 2,
+  "validation_failures": [
+    {
+      "attempt": 1,
+      "error_type": "pydantic_validation_error",
+      "details": [
+        {
+          "type": "value_error",
+          "loc": [
+            "email"
+          ],
+          "msg": "value is not a valid email address: An email address must have an @-sign."
+        },
+        {
+          "type": "list_type",
+          "loc": [
+            "skills"
+          ],
+          "msg": "Input should be a valid list"
+        },
+        {
+          "type": "float_parsing",
+          "loc": [
+            "years_experience"
+          ],
+          "msg": "Input should be a valid number, unable to parse string as a number"
+        }
+      ]
+    }
+  ],
+  "data": {
+    "name": "John Smith",
+    "email": "john@example.com",
+    "skills": [
+      "Python",
+      "FastAPI",
+      "Docker",
+      "AWS"
+    ],
+    "years_experience": 5.0
+  },
+  "raw_output": null,
+  "latency_ms": 1.533
+}
+```
+
+Reproduce the capture and GIF from the repository root:
+
+```bash
+pip install -r requirements-dev.txt pillow
+python docs/capture_demo.py
+python docs/render_replay.py
+```
+
+The renderer needs DejaVu Sans Mono (on Debian/Ubuntu: `fonts-dejavu-core`). [Capture metadata](docs/assets/capture.json) records the source revision. [Request JSON](docs/assets/request.json) and [response JSON](docs/assets/response.json) are available separately.
 
 ## Engineering behavior
 

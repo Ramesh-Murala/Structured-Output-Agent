@@ -1,0 +1,47 @@
+{
+  "success": true,
+  "schema_name": "candidate",
+  "attempts": 2,
+  "validation_failures": [
+    {
+      "attempt": 1,
+      "error_type": "pydantic_validation_error",
+      "details": [
+        {
+          "type": "value_error",
+          "loc": [
+            "email"
+          ],
+          "msg": "value is not a valid email address: An email address must have an @-sign."
+        },
+        {
+          "type": "list_type",
+          "loc": [
+            "skills"
+          ],
+          "msg": "Input should be a valid list"
+        },
+        {
+          "type": "float_parsing",
+          "loc": [
+            "years_experience"
+          ],
+          "msg": "Input should be a valid number, unable to parse string as a number"
+        }
+      ]
+    }
+  ],
+  "data": {
+    "name": "John Smith",
+    "email": "john@example.com",
+    "skills": [
+      "Python",
+      "FastAPI",
+      "Docker",
+      "AWS"
+    ],
+    "years_experience": 5.0
+  },
+  "raw_output": null,
+  "latency_ms": 1.533
+}
