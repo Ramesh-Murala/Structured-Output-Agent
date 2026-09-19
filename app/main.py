@@ -18,6 +18,7 @@ async def lifespan(app: FastAPI):
     app.state.agent = StructuredOutputAgent(
         provider=provider,
         validation_logger=ValidationLogger(settings.validation_log_path),
+        request_timeout_seconds=settings.request_timeout_seconds,
     )
     yield
 

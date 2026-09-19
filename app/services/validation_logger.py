@@ -23,8 +23,11 @@ class ValidationLogger:
             "schema_name": schema_name,
             "attempt": attempt,
             "error_type": error_type,
-            "details": details,
-            "raw_output": raw_output,
+            # Pydantic error input/context and free-text messages can contain
+            # personal data. Persist only an allowlist of structural metadata.
+            "details": [{"type": d.get("type", error_type), "loc": d.get("loc", [])}
+                        for d in details],
+            "output_characters": len(raw_output),
         }
         with self.path.open("a", encoding="utf-8") as file:
             file.write(json.dumps(record, ensure_ascii=False) + "\n")

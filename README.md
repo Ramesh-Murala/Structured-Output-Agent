@@ -1,358 +1,82 @@
 # Structured Output Agent
 
-A production-style reliability layer for LLM applications that **enforces Pydantic schemas, validates model output, retries malformed responses, and logs validation failures for observability**.
+An inspectable reliability layer for LLM-backed APIs: validate generated JSON against Pydantic schemas, feed errors into bounded corrective retries, and return an explicit failure when correction is exhausted.
 
-## Why this project exists
+**Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields.
 
-LLMs are probabilistic. Production APIs are not.
+## Engineering behavior
 
-A model can return malformed JSON, wrong field types, invalid enum values, missing fields, or data that violates business constraints. Structured Output Agent wraps an LLM call with deterministic application-level validation and retry behavior so downstream systems receive predictable data.
+- Separate provider, parser, schema registry, retry, API, and logging layers.
+- Candidate extraction, support-ticket classification, and product schemas.
+- A total generation deadline shared across corrective attempts.
+- Metadata-only validation logs: no raw generated text or Pydantic input/context values.
+- API latency in milliseconds and attempt count for successful or exhausted runs.
+- Explicit 503 responses for provider unavailability and 504 for the generation deadline.
+- Offline fault-injection evaluation and CI on Python 3.11/3.12.
 
-## Core capabilities
-
-- Pydantic v2 schema enforcement
-- JSON parsing and top-level object checks
-- Automatic retry after parse or validation failures
-- Validation errors fed back into the retry prompt
-- JSONL failure logging for debugging and observability
-- Configurable retry budget
-- FastAPI REST API with OpenAPI/Swagger docs
-- Provider abstraction with OpenAI and deterministic mock providers
-- Unit tests for valid, malformed, recoverable, and exhausted-retry cases
-- Docker and Docker Compose support
-
-## Architecture
-
-```text
-Client
-  |
-  v
-FastAPI /v1/generate
-  |
-  v
-Schema Registry -----> Pydantic JSON Schema
-  |                         |
-  |                         v
-  +--------------------> LLM Provider
-                            |
-                            v
-                       Raw model text
-                            |
-                            v
-                       JSON parser
-                            |
-                            v
-                     Pydantic validator
-                       /          \
-                    valid        invalid
-                     |              |
-                     v              v
-                API response   failure logger
-                                    |
-                                    v
-                              retry prompt
-                                    |
-                                    +----> LLM
-```
-
-## Project structure
-
-```text
-structured-output-agent/
-├── app/
-│   ├── api/routes.py
-│   ├── core/config.py
-│   ├── core/logging.py
-│   ├── llm/base.py
-│   ├── llm/factory.py
-│   ├── llm/mock_provider.py
-│   ├── llm/openai_provider.py
-│   ├── schemas/api.py
-│   ├── schemas/domain.py
-│   ├── schemas/registry.py
-│   ├── services/agent.py
-│   ├── services/json_parser.py
-│   ├── services/retry_prompt.py
-│   ├── services/validation_logger.py
-│   └── main.py
-├── examples/
-├── logs/
-├── scripts/
-├── tests/
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── Makefile
-├── pyproject.toml
-├── requirements.txt
-└── requirements-dev.txt
-```
-
-## Quick start
-
-### 1. Create a virtual environment
+## Quick start without credentials
 
 ```bash
 python -m venv .venv
-```
-
-Windows PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-### 2. Install dependencies
-
-```bash
+source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
+pytest -q
+ruff check .
+python scripts/demo.py
+python -m evaluation.run --output evaluation/results.json
 ```
 
-### 3. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-On Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Add your OpenAI API key to `.env`:
-
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5-mini
-MAX_RETRIES=2
-```
-
-### 4. Start the API
+For the API, copy `.env.example` to `.env`, configure the provider, then:
 
 ```bash
 uvicorn app.main:app --reload
-```
-
-Open Swagger UI at:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-## API usage
-
-### Health check
-
-```bash
 curl http://127.0.0.1:8000/health
-```
-
-### Generate validated candidate data
-
-```bash
 curl -X POST http://127.0.0.1:8000/v1/generate \
   -H "Content-Type: application/json" \
   -d @examples/candidate_request.json
 ```
 
-Example successful response:
+Swagger UI is at `http://127.0.0.1:8000/docs`. `docker compose up --build` starts the same API.
+
+Use `LLM_PROVIDER=openai` with `OPENAI_API_KEY` and `OPENAI_MODEL` for live generation. The mock provider is a finite scripted sequence for demos/tests; restart the API to reset it. It is not a reusable substitute for an LLM service.
+
+## Request and response
 
 ```json
-{
-  "success": true,
-  "schema_name": "candidate",
-  "attempts": 2,
-  "validation_failures": [
-    {
-      "attempt": 1,
-      "error_type": "pydantic_validation_error",
-      "details": []
-    }
-  ],
-  "data": {
-    "name": "Jane Doe",
-    "email": "jane@example.com",
-    "skills": ["Python", "FastAPI"],
-    "years_experience": 4.0
-  },
-  "raw_output": null
-}
+{"prompt":"Extract Jane Doe, jane@example.com, Python, four years experience.","schema_name":"candidate","max_retries":2}
 ```
 
-## Included schemas
+A successful response includes `success`, `data`, `attempts`, `validation_failures`, and `latency_ms`. Exhaustion returns `success=false` and `data=null` with HTTP 200; callers must inspect `success`. Raw output is always null, including on failure. This changes the old diagnostic behavior to avoid returning invalid generated content.
 
-### Candidate
+`MAX_RETRIES` defaults to 2 (three generation attempts). `REQUEST_TIMEOUT_SECONDS` defaults to 30 and applies across those attempts. The OpenAI SDK may perform its own transport retries inside that deadline; `attempts` counts agent-level generation calls, not HTTP requests or billable tokens.
 
-```json
-{
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "skills": ["Python", "FastAPI"],
-  "years_experience": 4.0
-}
-```
+## Reproducible evaluation
 
-### Support ticket
-
-```json
-{
-  "category": "technical",
-  "priority": "high",
-  "summary": "User is unable to access the account.",
-  "requires_human": true,
-  "sentiment": "negative"
-}
-```
-
-### Product
-
-```json
-{
-  "name": "Wireless Keyboard",
-  "price": 89.99,
-  "currency": "USD",
-  "in_stock": true,
-  "product_url": "https://example.com/keyboard"
-}
-```
-
-## Retry behavior
-
-For every generation attempt, the agent performs two checks:
-
-1. Parse the response as a JSON object.
-2. Validate the parsed object against the selected Pydantic model.
-
-If either check fails, the agent records the failure and constructs a new prompt containing the previous response and structured validation errors. It repeats the process until the response validates or the retry budget is exhausted.
-
-## Validation logs
-
-Failures are written as JSON Lines to:
-
-```text
-logs/validation_failures.jsonl
-```
-
-Example record:
-
-```json
-{
-  "timestamp": "2026-08-14T22:00:00+00:00",
-  "schema_name": "candidate",
-  "attempt": 1,
-  "error_type": "pydantic_validation_error",
-  "details": [{"type": "value_error", "loc": ["email"]}],
-  "raw_output": "{...}"
-}
-```
-
-The log file is intentionally excluded from Git while the `logs/` directory is retained.
-
-## Run the deterministic demo
-
-The demo intentionally produces an invalid first response and a valid second response, proving that retry logic works without calling an external API.
+[`evaluation/cases.json`](evaluation/cases.json) injects malformed JSON, arrays, invalid emails, out-of-range values, invalid enums, and persistent failures. Run:
 
 ```bash
-python scripts/demo.py
+python -m evaluation.run --output evaluation/results.json
 ```
 
-## Tests
-
-```bash
-pytest -q
-```
-
-The test suite covers:
-
-- valid output on the first attempt
-- malformed JSON
-- Pydantic validation failure
-- retry and successful correction
-- retry exhaustion
-- health endpoint
-
-## Linting
-
-```bash
-ruff check .
-```
-
-## Docker
-
-```bash
-docker compose up --build
-```
-
-Then open:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-## Adding a new schema
-
-Create a Pydantic model in `app/schemas/domain.py`:
-
-```python
-class Invoice(BaseModel):
-    invoice_id: str
-    amount: float
-    paid: bool
-```
-
-Then register it in `app/schemas/registry.py` and add the schema name to the API request model.
+[`evaluation/results.json`](evaluation/results.json) compares first-response schema validity with validity after corrective attempts and reports generation-call overhead. Corrections are scripted; these results prove control-flow behavior, not the probability that a live model will fix an error. No live-model latency, cost, or accuracy is claimed. Runtime `latency_ms` measures a real request's elapsed time; live benchmarking remains separate work.
 
 ## Design decisions
 
-**Why validate outside the LLM provider?** Provider-native structured output is useful, but application-level validation remains valuable for portability, business constraints, testing, and defense in depth.
+**Application validation:** provider-independent business constraints and deterministic failure semantics. The current OpenAI adapter prompts with a schema; provider-native strict schema output is not implemented. Comparing native output constraints plus business validation against prompt-only output is a future experiment.
 
-**Why log raw invalid output?** It makes failure patterns diagnosable. In a real production environment, sensitive data should be redacted before persistence.
+**Bounded retries:** validation failures get a corrective prompt. Provider availability failures are handled separately instead of consuming validation retries. The overall deadline bounds slow generation.
 
-**Why JSONL?** It is simple, append-only, grep-friendly, and easy to ingest later into CloudWatch, ELK, Datadog, or another observability pipeline.
+**Minimal logs:** persist timestamp, schema, attempt, error type/location, and output character count. Successful output is returned to the caller, not written to the validation log. Prompts and prior output still go to the model provider for generation/correction; this is not a comprehensive privacy guarantee.
 
-**Why a provider abstraction?** Validation and retry logic should not depend on a specific model vendor.
+## Remaining deployment work
 
-## Production improvements
+- Authentication, request-rate limits, concurrency control, and multi-worker log collection.
+- Live evaluation of factual correctness, schema validity, token usage, and latency distributions.
+- Provider-native output constraints, usage accounting, and distributed tracing.
+- Capacity/load testing and deployment-specific retention policies.
 
-Potential next iterations:
+## Repository map
 
-- provider-native strict JSON-schema output
-- exponential backoff for transient API failures
-- async concurrency limits
-- token, latency, and retry metrics
-- Prometheus/OpenTelemetry instrumentation
-- PII redaction before failure logging
-- persistent storage for evaluation runs
-- dynamic user-supplied JSON Schema support
-- authentication and rate limiting
-- evaluation harness comparing raw LLM output with validated output
-- CI workflow for linting and tests
+`app/llm/` provider adapters · `app/services/` validation/retry/logging · `app/schemas/` domain models · `tests/` failure-path and API tests · `evaluation/` reproducible fixtures/results · `.github/workflows/ci.yml` automated checks.
 
-## Security notes
-
-- Never commit `.env` or API keys.
-- Avoid logging sensitive production prompts or outputs without redaction.
-- Add authentication before exposing this API publicly.
-- Apply rate limits and request-size limits in production.
-
-## Tech stack
-
-- Python 3.11+
-- Pydantic v2
-- FastAPI
-- OpenAI Python SDK
-- pytest
-- Ruff
-- Docker
-
-## License
-
-MIT
+MIT license. See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

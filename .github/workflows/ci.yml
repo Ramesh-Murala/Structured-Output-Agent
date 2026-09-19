@@ -30,3 +30,11 @@ jobs:
 
       - name: Test
         run: pytest -q
+
+      - name: Offline fault-injection evaluation
+        run: python -m evaluation.run --output evaluation/results.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validation-evaluation-${{ matrix.python-version }}
+          path: evaluation/results.json
