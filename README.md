@@ -1,10 +1,14 @@
 # Structured Output Agent
 
 [![CI](https://github.com/Ramesh-Murala/Structured-Output-Agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ramesh-Murala/Structured-Output-Agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](pyproject.toml)
 
-An inspectable reliability layer for LLM-backed APIs: validate generated JSON against Pydantic schemas, feed errors into bounded corrective retries, and return an explicit failure when correction is exhausted.
+A reliability layer for LLM-backed APIs: validate generated JSON against Pydantic schemas, feed the validation errors back as bounded corrective retries under a shared deadline, and return an explicit typed failure when correction is exhausted.
 
-**Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields.
+**Measured on the fault-injection suite:** 1/8 cases valid on the first response, 7/8 valid after correction, at a mean of 2.0 provider calls. Reproducible offline with a single command, no credentials required.
+
+**Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields, and the corrections measured above are scripted rather than live-model results.
 
 
 ## Visual proof
