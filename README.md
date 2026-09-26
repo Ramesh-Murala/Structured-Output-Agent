@@ -6,6 +6,8 @@
 
 A reliability layer for LLM-backed APIs: validate generated JSON against Pydantic schemas, feed the validation errors back as bounded corrective retries under a shared deadline, and return an explicit typed failure when correction is exhausted.
 
+**[Try the interactive live demo](https://structured-output-agent-demo.rameshmurala10.chatgpt.site/)** — edit scripted provider responses and inspect validation failures and retry attempts in your browser. This deterministic browser demo has no live model; [the Python API](app/main.py) provides the full Pydantic implementation.
+
 **Measured on the fault-injection suite:** 1/8 cases valid on the first response, 7/8 valid after correction, at a mean of 2.0 provider calls. Reproducible offline with a single command, no credentials required.
 
 **Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields, and the corrections measured above are scripted rather than live-model results.
