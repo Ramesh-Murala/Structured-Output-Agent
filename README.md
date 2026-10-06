@@ -8,7 +8,7 @@ A reliability layer for LLM-backed APIs: validate generated JSON against Pydanti
 
 **[Try the interactive live demo](https://structured-output-agent-demo.rameshmurala10.chatgpt.site/)** — edit scripted provider responses and inspect validation failures and retry attempts in your browser. This deterministic browser demo has no live model; [the Python API](app/main.py) provides the full Pydantic implementation.
 
-**Measured on the fault-injection suite:** 1/8 cases valid on the first response, 7/8 valid after correction, at a mean of 2.0 provider calls. Reproducible offline with a single command, no credentials required.
+**Measured on the fault-injection suite:** 1/9 cases valid on the first response, 8/9 valid after correction, at a mean of 2.0 provider calls. Reproducible offline with a single command, no credentials required.
 
 **Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields, and the corrections measured above are scripted rather than live-model results.
 
@@ -38,12 +38,12 @@ This GIF renders actual captured JSON as an animated transcript; it is not a scr
 
 | Measure | Recorded result |
 |---|---:|
-| Scripted cases | 8 |
-| Valid on first response | 12.5% (1/8) |
-| Valid after correction | 87.5% (7/8) |
+| Scripted cases | 9 |
+| Valid on first response | 11.1% (1/9) |
+| Valid after correction | 88.9% (8/9) |
 | Mean provider calls | 2.0 |
 
-[Recorded evaluation](evaluation/results.json). Eight scripted cases test control flow, including one intentional exhaustion. These are not live-model success rates.
+[Recorded evaluation](evaluation/results.json). Nine scripted cases test control flow, including ambiguous duplicate keys and one intentional exhaustion. These are not live-model success rates.
 
 ### Sample request
 
@@ -165,7 +165,7 @@ A successful response includes `success`, `data`, `attempts`, `validation_failur
 
 ## Reproducible evaluation
 
-[`evaluation/cases.json`](evaluation/cases.json) injects malformed JSON, arrays, invalid emails, out-of-range values, invalid enums, and persistent failures. Run:
+[`evaluation/cases.json`](evaluation/cases.json) injects malformed JSON, arrays, duplicate keys, invalid emails, out-of-range values, invalid enums, and persistent failures. Run:
 
 ```bash
 python -m evaluation.run --output evaluation/results.json
