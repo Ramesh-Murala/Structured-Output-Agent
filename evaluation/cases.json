@@ -29,6 +29,16 @@
     "expected_success": true
   },
   {
+    "name": "duplicate_json_key",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Jane Doe\", \"email\": \"wrong@example.com\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
     "name": "invalid_email",
     "schema": "candidate",
     "prompt": "Return data matching the selected schema.",
