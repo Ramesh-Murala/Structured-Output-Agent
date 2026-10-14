@@ -89,6 +89,28 @@ async def test_parse_error_then_retry(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_unexpected_field_is_retried_and_removed(tmp_path: Path) -> None:
+    valid = {
+        "name": "Jane Doe",
+        "email": "jane@example.com",
+        "skills": ["Python"],
+        "years_experience": 4,
+    }
+    unexpected = {**valid, "private_note": "must not be silently accepted"}
+    agent = StructuredOutputAgent(
+        provider=MockProvider([json.dumps(unexpected), json.dumps(valid)]),
+        validation_logger=ValidationLogger(tmp_path / "failures.jsonl"),
+    )
+
+    result = await agent.run(prompt="extract", schema_name="candidate", max_retries=1)
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert result.validation_failures[0].details[0]["type"] == "extra_forbidden"
+    assert "private_note" not in result.data
+
+
+@pytest.mark.asyncio
 async def test_returns_failure_after_retries_exhausted(tmp_path: Path) -> None:
     agent = StructuredOutputAgent(
         provider=MockProvider(["bad", "still bad"]),

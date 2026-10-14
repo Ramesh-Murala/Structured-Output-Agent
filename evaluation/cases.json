@@ -79,6 +79,16 @@
     "expected_success": true
   },
   {
+    "name": "unexpected_field",
+    "schema": "candidate",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4, \"private_note\": \"unexpected\"}",
+      "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\", \"skills\": [\"Python\"], \"years_experience\": 4}"
+    ],
+    "expected_success": true
+  },
+  {
     "name": "retry_exhaustion",
     "schema": "candidate",
     "prompt": "Return data matching the selected schema.",
