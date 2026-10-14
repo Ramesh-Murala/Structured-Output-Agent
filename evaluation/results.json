@@ -1,8 +1,8 @@
 {
   "mode": "offline_scripted_fault_injection",
-  "cases": 9,
-  "first_response_validity": 0.1111111111111111,
-  "after_retry_validity": 0.8888888888888888,
+  "cases": 10,
+  "first_response_validity": 0.1,
+  "after_retry_validity": 0.9,
   "mean_provider_calls": 2.0,
   "results": [
     {
@@ -75,6 +75,16 @@
     },
     {
       "case": "invalid_enum",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "unexpected_field",
       "first_response_valid": false,
       "after_retry_valid": true,
       "provider_calls": 2,
