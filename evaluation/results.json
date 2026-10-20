@@ -1,8 +1,8 @@
 {
   "mode": "offline_scripted_fault_injection",
-  "cases": 10,
-  "first_response_validity": 0.1,
-  "after_retry_validity": 0.9,
+  "cases": 11,
+  "first_response_validity": 0.09090909090909091,
+  "after_retry_validity": 0.9090909090909091,
   "mean_provider_calls": 2.0,
   "results": [
     {
@@ -91,6 +91,16 @@
       "expected_success": true,
       "failures": [
         "pydantic_validation_error"
+      ]
+    },
+    {
+      "case": "non_finite_price",
+      "first_response_valid": false,
+      "after_retry_valid": true,
+      "provider_calls": 2,
+      "expected_success": true,
+      "failures": [
+        "json_parse_error"
       ]
     },
     {

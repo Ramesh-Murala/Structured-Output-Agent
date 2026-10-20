@@ -111,6 +111,32 @@ async def test_unexpected_field_is_retried_and_removed(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("price,error_type", [
+    ("1e999", "json_parse_error"),
+    ('"Infinity"', "pydantic_validation_error"),
+    ('"1e999"', "pydantic_validation_error"),
+    ('"NaN"', "pydantic_validation_error"),
+])
+async def test_non_finite_price_is_retried_instead_of_serialized_as_null(
+    tmp_path: Path, price: str, error_type: str,
+) -> None:
+    agent = StructuredOutputAgent(
+        provider=MockProvider([
+            '{"name":"Keyboard","price":' + price + ',"currency":"USD","in_stock":true}',
+            '{"name":"Keyboard","price":49.99,"currency":"USD","in_stock":true}',
+        ]),
+        validation_logger=ValidationLogger(tmp_path / "failures.jsonl"),
+    )
+
+    result = await agent.run(prompt="extract", schema_name="product", max_retries=1)
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert result.validation_failures[0].error_type == error_type
+    assert result.data["price"] == 49.99
+
+
+@pytest.mark.asyncio
 async def test_returns_failure_after_retries_exhausted(tmp_path: Path) -> None:
     agent = StructuredOutputAgent(
         provider=MockProvider(["bad", "still bad"]),

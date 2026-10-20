@@ -24,3 +24,18 @@ def test_rejects_top_level_array() -> None:
 def test_rejects_duplicate_keys_at_any_depth(payload: str) -> None:
     with pytest.raises(JSONParseError, match="Duplicate JSON object key"):
         parse_json_object(payload)
+
+
+@pytest.mark.parametrize("payload", [
+    '{"price":NaN}', '{"price":Infinity}', '{"price":-Infinity}',
+    '{"price":1e999}', '{"price":-1e999}', '{"nested":[{"value":NaN}]}',
+])
+def test_rejects_non_finite_numbers_at_any_depth(payload: str) -> None:
+    with pytest.raises(JSONParseError, match="Non-finite JSON number"):
+        parse_json_object(payload)
+
+
+def test_preserves_finite_numbers_and_numeric_strings() -> None:
+    assert parse_json_object('{"small":1e-3,"large":1e100,"text":"Infinity"}') == {
+        "small": 0.001, "large": 1e100, "text": "Infinity",
+    }

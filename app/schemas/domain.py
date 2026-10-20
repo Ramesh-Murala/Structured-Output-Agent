@@ -24,7 +24,7 @@ class SupportTicket(StrictOutputModel):
 
 class Product(StrictOutputModel):
     name: Annotated[str, Field(min_length=1, max_length=160)]
-    price: Annotated[float, Field(gt=0)]
+    price: Annotated[float, Field(gt=0, allow_inf_nan=False)]
     currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     in_stock: bool
     product_url: HttpUrl | None = None
