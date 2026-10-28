@@ -99,6 +99,16 @@
     "expected_success": true
   },
   {
+    "name": "wrong_scalar_types",
+    "schema": "product",
+    "prompt": "Return data matching the selected schema.",
+    "outputs": [
+      "{\"name\": \"Keyboard\", \"price\": \"49.99\", \"currency\": \"USD\", \"in_stock\": \"true\"}",
+      "{\"name\": \"Keyboard\", \"price\": 49.99, \"currency\": \"USD\", \"in_stock\": true}"
+    ],
+    "expected_success": true
+  },
+  {
     "name": "retry_exhaustion",
     "schema": "candidate",
     "prompt": "Return data matching the selected schema.",
