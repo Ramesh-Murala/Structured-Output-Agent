@@ -137,6 +137,53 @@ async def test_non_finite_price_is_retried_instead_of_serialized_as_null(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("schema_name", "bad", "good", "field"), [
+    (
+        "candidate",
+        {"name": "Jane Doe", "email": "jane@example.com", "skills": ["Python"],
+         "years_experience": "4"},
+        {"name": "Jane Doe", "email": "jane@example.com", "skills": ["Python"],
+         "years_experience": 4},
+        "years_experience",
+    ),
+    (
+        "support_ticket",
+        {"category": "technical", "priority": "high", "summary": "Cannot sign in",
+         "requires_human": "false", "sentiment": "negative"},
+        {"category": "technical", "priority": "high", "summary": "Cannot sign in",
+         "requires_human": False, "sentiment": "negative"},
+        "requires_human",
+    ),
+    (
+        "product",
+        {"name": "Keyboard", "price": "49.99", "currency": "USD", "in_stock": True},
+        {"name": "Keyboard", "price": 49.99, "currency": "USD", "in_stock": True},
+        "price",
+    ),
+    (
+        "product",
+        {"name": "Keyboard", "price": 49.99, "currency": "USD", "in_stock": "true"},
+        {"name": "Keyboard", "price": 49.99, "currency": "USD", "in_stock": True},
+        "in_stock",
+    ),
+])
+async def test_wrong_json_scalar_type_is_retried(
+    tmp_path: Path, schema_name: str, bad: dict, good: dict, field: str,
+) -> None:
+    agent = StructuredOutputAgent(
+        provider=MockProvider([json.dumps(bad), json.dumps(good)]),
+        validation_logger=ValidationLogger(tmp_path / "failures.jsonl"),
+    )
+
+    result = await agent.run(prompt="extract", schema_name=schema_name, max_retries=1)
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert result.validation_failures[0].error_type == "pydantic_validation_error"
+    assert result.validation_failures[0].details[0]["loc"] == (field,)
+
+
+@pytest.mark.asyncio
 async def test_returns_failure_after_retries_exhausted(tmp_path: Path) -> None:
     agent = StructuredOutputAgent(
         provider=MockProvider(["bad", "still bad"]),
