@@ -1,6 +1,11 @@
 import pytest
 
-from app.services.json_parser import JSONParseError, parse_json_object
+from app.services.json_parser import (
+    MAX_INTEGER_DIGITS,
+    MAX_JSON_CHARACTERS,
+    JSONParseError,
+    parse_json_object,
+)
 
 
 def test_parse_valid_json_object() -> None:
@@ -39,3 +44,17 @@ def test_preserves_finite_numbers_and_numeric_strings() -> None:
     assert parse_json_object('{"small":1e-3,"large":1e100,"text":"Infinity"}') == {
         "small": 0.001, "large": 1e100, "text": "Infinity",
     }
+
+
+def test_rejects_integer_larger_than_parser_budget() -> None:
+    payload = '{"value":' + "9" * (MAX_INTEGER_DIGITS + 1) + "}"
+
+    with pytest.raises(JSONParseError, match="integer exceeds"):
+        parse_json_object(payload)
+
+
+def test_rejects_output_larger_than_parser_budget() -> None:
+    payload = '{"value":"' + "x" * MAX_JSON_CHARACTERS + '"}'
+
+    with pytest.raises(JSONParseError, match="output exceeds"):
+        parse_json_object(payload)

@@ -5,6 +5,7 @@ import pytest
 
 from app.llm.mock_provider import MockProvider
 from app.services.agent import StructuredOutputAgent
+from app.services.retry_prompt import MAX_RETRY_OUTPUT_CHARACTERS, build_retry_prompt
 from app.services.validation_logger import ValidationLogger
 
 
@@ -243,3 +244,17 @@ async def test_provider_error_is_not_retried_as_validation_failure(tmp_path: Pat
     with pytest.raises(RuntimeError):
         await agent.run(prompt="extract", schema_name="candidate", max_retries=2)
     assert provider.calls == 1
+
+
+def test_retry_prompt_truncates_oversized_invalid_output() -> None:
+    raw_output = "x" * (MAX_RETRY_OUTPUT_CHARACTERS + 100)
+
+    prompt = build_retry_prompt(
+        original_prompt="extract",
+        raw_output=raw_output,
+        errors=[{"message": "invalid"}],
+    )
+
+    assert raw_output not in prompt
+    assert "[previous response truncated]" in prompt
+    assert "x" * MAX_RETRY_OUTPUT_CHARACTERS in prompt
