@@ -120,11 +120,12 @@ The renderer needs DejaVu Sans Mono (on Debian/Ubuntu: `fonts-dejavu-core`). [Ca
 ## Engineering behavior
 
 - Separate provider, parser, schema registry, retry, API, and logging layers.
-- Reject duplicate JSON keys, nonstandard NaN/Infinity constants, and numeric literals that overflow to infinity before schema validation.
+- Reject duplicate JSON keys, nonstandard NaN/Infinity constants, numeric literals that overflow to infinity, oversized integer literals, and provider outputs above 100,000 characters before schema validation.
 - Candidate, support-ticket, and product schemas enforce JSON-native scalar types instead of coercing strings into numbers or booleans.
 - Product prices must be numeric, positive, and finite.
 - Candidate extraction, support-ticket classification, and product schemas reject unexpected fields.
 - A total generation deadline shared across corrective attempts.
+- Corrective prompts include at most 4,000 characters of the previous invalid response to prevent retry amplification.
 - Metadata-only validation logs: no raw generated text or Pydantic input/context values.
 - API latency in milliseconds and attempt count for successful or exhausted runs.
 - Explicit 503 responses for provider unavailability and 504 for the generation deadline.
