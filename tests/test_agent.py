@@ -5,6 +5,7 @@ import pytest
 
 from app.llm.mock_provider import MockProvider
 from app.services.agent import StructuredOutputAgent
+from app.services.json_parser import MAX_JSON_NESTING_DEPTH
 from app.services.retry_prompt import MAX_RETRY_OUTPUT_CHARACTERS, build_retry_prompt
 from app.services.validation_logger import ValidationLogger
 
@@ -87,6 +88,29 @@ async def test_parse_error_then_retry(tmp_path: Path) -> None:
     assert result.success is True
     assert result.attempts == 2
     assert result.validation_failures[0].error_type == "json_parse_error"
+
+
+@pytest.mark.asyncio
+async def test_excessive_json_nesting_is_retried(tmp_path: Path) -> None:
+    deeply_nested = (
+        '{"value":' + "[" * MAX_JSON_NESTING_DEPTH + "0"
+        + "]" * MAX_JSON_NESTING_DEPTH + "}"
+    )
+    corrected = json.dumps({
+        "name": "Jane Doe", "email": "jane@example.com",
+        "skills": ["Python"], "years_experience": 4,
+    })
+    agent = StructuredOutputAgent(
+        provider=MockProvider([deeply_nested, corrected]),
+        validation_logger=ValidationLogger(tmp_path / "failures.jsonl"),
+    )
+
+    result = await agent.run(prompt="extract", schema_name="candidate", max_retries=1)
+
+    assert result.success is True
+    assert result.attempts == 2
+    assert result.validation_failures[0].error_type == "json_parse_error"
+    assert "nesting exceeds" in result.validation_failures[0].details[0]["message"]
 
 
 @pytest.mark.asyncio
