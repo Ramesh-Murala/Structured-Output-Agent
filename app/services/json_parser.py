@@ -4,6 +4,7 @@ from typing import Any
 
 MAX_JSON_CHARACTERS = 100_000
 MAX_INTEGER_DIGITS = 1_000
+MAX_JSON_NESTING_DEPTH = 100
 
 
 class JSONParseError(ValueError):
@@ -39,11 +40,38 @@ def _parse_bounded_int(value: str) -> int:
     return int(value)
 
 
+def _check_nesting_depth(raw_output: str) -> None:
+    """Reject excessive structural depth without counting brackets in strings."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for char in raw_output:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in "[{":
+            depth += 1
+            if depth > MAX_JSON_NESTING_DEPTH:
+                raise JSONParseError(
+                    f"JSON nesting exceeds {MAX_JSON_NESTING_DEPTH}-level limit"
+                )
+        elif char in "]}":
+            depth -= 1
+
+
 def parse_json_object(raw_output: str) -> dict[str, Any]:
     if len(raw_output) > MAX_JSON_CHARACTERS:
         raise JSONParseError(
             f"JSON output exceeds {MAX_JSON_CHARACTERS}-character limit"
         )
+    _check_nesting_depth(raw_output)
     try:
         value = json.loads(
             raw_output, object_pairs_hook=_reject_duplicate_keys,
@@ -52,7 +80,7 @@ def parse_json_object(raw_output: str) -> dict[str, Any]:
         )
     except JSONParseError:
         raise
-    except (json.JSONDecodeError, ValueError) as exc:
+    except (json.JSONDecodeError, ValueError, RecursionError) as exc:
         raise JSONParseError(str(exc)) from exc
 
     if not isinstance(value, dict):

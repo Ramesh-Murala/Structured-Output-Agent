@@ -8,7 +8,7 @@ A reliability layer for LLM-backed APIs: validate generated JSON against Pydanti
 
 **[Try the interactive live demo](https://structured-output-agent-demo.rameshmurala10.chatgpt.site/)** — edit scripted provider responses and inspect validation failures and retry attempts in your browser. This deterministic browser demo has no live model; [the Python API](app/main.py) provides the full Pydantic implementation.
 
-**Measured on the fault-injection suite:** 1/12 cases valid on the first response, 11/12 valid after correction, at a mean of 2.0 provider calls. Reproducible offline with a single command, no credentials required.
+**Measured on the fault-injection suite:** 1/13 cases valid on the first response and 12/13 valid after retries; the remaining intentional exhaustion failed explicitly as expected. Mean provider calls were 2.0. Reproducible offline with a single command, no credentials required.
 
 **Status:** a tested reference implementation, not a production-readiness claim. It demonstrates schema reliability; it does not verify the factual accuracy of generated fields, and the corrections measured above are scripted rather than live-model results.
 
@@ -38,12 +38,12 @@ This GIF renders actual captured JSON as an animated transcript; it is not a scr
 
 | Measure | Recorded result |
 |---|---:|
-| Scripted cases | 12 |
-| Valid on first response | 8.3% (1/12) |
-| Valid after correction | 91.7% (11/12) |
+| Scripted cases | 13 |
+| Valid on first response | 7.7% (1/13) |
+| Expected outcome after retries | 100% (13/13) |
 | Mean provider calls | 2.0 |
 
-[Recorded evaluation](evaluation/results.json). Twelve scripted cases test control flow, including ambiguous duplicate keys, unexpected fields, wrong scalar types, non-finite numbers, and one intentional exhaustion. These are not live-model success rates.
+[Recorded evaluation](evaluation/results.json). Thirteen scripted cases test control flow, including ambiguous duplicate keys, unexpected fields, wrong scalar types, non-finite numbers, excessive nesting, and one intentional exhaustion. These are not live-model success rates.
 
 ### Sample request
 
@@ -120,7 +120,7 @@ The renderer needs DejaVu Sans Mono (on Debian/Ubuntu: `fonts-dejavu-core`). [Ca
 ## Engineering behavior
 
 - Separate provider, parser, schema registry, retry, API, and logging layers.
-- Reject duplicate JSON keys, nonstandard NaN/Infinity constants, numeric literals that overflow to infinity, oversized integer literals, and provider outputs above 100,000 characters before schema validation.
+- Reject duplicate JSON keys, nonstandard NaN/Infinity constants, numeric literals that overflow to infinity, oversized integer literals, JSON nesting above 100 levels, and provider outputs above 100,000 characters before schema validation.
 - Candidate, support-ticket, and product schemas enforce JSON-native scalar types instead of coercing strings into numbers or booleans.
 - Product prices must be numeric, positive, and finite.
 - Candidate extraction, support-ticket classification, and product schemas reject unexpected fields.
@@ -169,7 +169,7 @@ A successful response includes `success`, `data`, `attempts`, `validation_failur
 
 ## Reproducible evaluation
 
-[`evaluation/cases.json`](evaluation/cases.json) injects malformed JSON, arrays, duplicate keys, unexpected fields, wrong scalar types, non-finite numbers, invalid emails, out-of-range values, invalid enums, and persistent failures. Run:
+[`evaluation/cases.json`](evaluation/cases.json) injects malformed JSON, arrays, duplicate keys, unexpected fields, wrong scalar types, non-finite numbers, excessive nesting, invalid emails, out-of-range values, invalid enums, and persistent failures. Run:
 
 ```bash
 python -m evaluation.run --output evaluation/results.json

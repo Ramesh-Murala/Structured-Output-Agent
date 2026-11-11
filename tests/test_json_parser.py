@@ -3,6 +3,7 @@ import pytest
 from app.services.json_parser import (
     MAX_INTEGER_DIGITS,
     MAX_JSON_CHARACTERS,
+    MAX_JSON_NESTING_DEPTH,
     JSONParseError,
     parse_json_object,
 )
@@ -58,3 +59,16 @@ def test_rejects_output_larger_than_parser_budget() -> None:
 
     with pytest.raises(JSONParseError, match="output exceeds"):
         parse_json_object(payload)
+
+
+def test_rejects_json_deeper_than_parser_budget() -> None:
+    payload = '{"value":' + "[" * MAX_JSON_NESTING_DEPTH + "0" + "]" * MAX_JSON_NESTING_DEPTH + "}"
+
+    with pytest.raises(JSONParseError, match="nesting exceeds"):
+        parse_json_object(payload)
+
+
+def test_nesting_budget_ignores_brackets_inside_strings() -> None:
+    brackets = "[{" * (MAX_JSON_NESTING_DEPTH + 1)
+
+    assert parse_json_object('{"value":"' + brackets + '"}') == {"value": brackets}
