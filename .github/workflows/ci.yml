@@ -34,6 +34,9 @@ jobs:
       - name: Offline fault-injection evaluation
         run: python -m evaluation.run --output evaluation/results.json
 
+      - name: Verify recorded evaluation is up to date
+        run: git diff --exit-code -- evaluation/results.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: validation-evaluation-${{ matrix.python-version }}
